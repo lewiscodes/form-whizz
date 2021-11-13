@@ -5,5 +5,4 @@ export interface INewQuestionTemplate {
 
 export interface IEditQuestionTemplate {
     readonly text?: string;
-    readonly questionTemplateId?: string;
 }

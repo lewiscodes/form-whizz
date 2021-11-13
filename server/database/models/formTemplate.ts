@@ -63,19 +63,23 @@ export const createFormTemplate = async (formTemplate: INewFormTemplate): Promis
     });
 }
 
+const editableFields: (keyof FormTemplateAttributes)[] = ['name'];
 export const editFormTemplate = async (id: string, newFormTemplateData: IEditFormTemplate): Promise<FormTemplate | undefined> => {
     const formTemplate = await getFormTemplate(id);
     if (formTemplate) {
         const keys = Object.keys(newFormTemplateData) as (keyof IEditFormTemplate)[];
         for (let x = 0; x < keys.length; x++) {
             const key = keys[x];
-            const value = newFormTemplateData[key];
-            await formTemplate.update({ [key]: value });
+            if (editableFields.includes(key)) {
+                const value = newFormTemplateData[key];
+                await formTemplate.update({ [key]: value });
+            }
         }
         return formTemplate;
     }
 };
 
+// TODO: replace with Sequelize "paranoid" implimentation
 export const archiveFormTemplate = async (id: string): Promise<FormTemplate | IError | undefined> => {
     const formTemplate = await getFormTemplate(id);
     if (formTemplate) {

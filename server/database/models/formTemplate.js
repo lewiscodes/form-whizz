@@ -63,19 +63,23 @@ const createFormTemplate = (formTemplate) => __awaiter(void 0, void 0, void 0, f
     });
 });
 exports.createFormTemplate = createFormTemplate;
+const editableFields = ['name'];
 const editFormTemplate = (id, newFormTemplateData) => __awaiter(void 0, void 0, void 0, function* () {
     const formTemplate = yield exports.getFormTemplate(id);
     if (formTemplate) {
         const keys = Object.keys(newFormTemplateData);
         for (let x = 0; x < keys.length; x++) {
             const key = keys[x];
-            const value = newFormTemplateData[key];
-            yield formTemplate.update({ [key]: value });
+            if (editableFields.includes(key)) {
+                const value = newFormTemplateData[key];
+                yield formTemplate.update({ [key]: value });
+            }
         }
         return formTemplate;
     }
 });
 exports.editFormTemplate = editFormTemplate;
+// TODO: replace with Sequelize "paranoid" implimentation
 const archiveFormTemplate = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const formTemplate = yield exports.getFormTemplate(id);
     if (formTemplate) {

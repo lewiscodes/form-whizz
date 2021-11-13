@@ -46,4 +46,7 @@ export const questionTemplateRoutes = (app: Express) => {
 
         res.json({ archivedQuestionTemplate });
     });
+
+    // TODO
+    // app.put('/questionTemplate/:id/changeQuestionType')
 }
