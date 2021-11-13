@@ -32,6 +32,10 @@ export const getAllQuestionTypes = async (): Promise<QuestionType[]> => {
     return await QuestionType.findAll();
 };
 
+export const getQuestionType = async (id: string): Promise<QuestionType | null> => {
+    return await QuestionType.findByPk(id);
+}
+
 export const initQuestionTypesData = async (): Promise<void> => {
     await QuestionType.create({ type: 'String' });
     await QuestionType.create({ type: 'Number' });

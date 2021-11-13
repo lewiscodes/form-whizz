@@ -1,5 +1,7 @@
 import express from 'express';
 import { formTemplateRoutes } from './models/formTemplate';
+import { questionTemplateRoutes } from './models/questionTemplate';
+import { questionTypeRoutes } from './models/questionType';
 
 const app = express();
 
@@ -10,5 +12,7 @@ app.get('/', (_req, res) => {
 })
 
 formTemplateRoutes(app);
+questionTypeRoutes(app);
+questionTemplateRoutes(app);
 
 export default app;

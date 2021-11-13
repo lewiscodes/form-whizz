@@ -1,10 +1,15 @@
-import { initFormTemplatesData } from "./models/formTemplate";
+import { getAllFormTemplates, initFormTemplatesData } from "./models/formTemplate";
 import { getAllQuestionTypes, initQuestionTypesData } from "./models/questionType"
 
 export const initData = async (): Promise<void> => {
-    const questionType = await getAllQuestionTypes()
-    if (!questionType.length) {
+    const questionTypes = await getAllQuestionTypes();
+    const formTemplates = await getAllFormTemplates();
+
+    if (!questionTypes.length) {
         await initQuestionTypesData();
+    }
+
+    if (!formTemplates.length) {
         await initFormTemplatesData();
     }
 }

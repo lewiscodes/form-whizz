@@ -9,17 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initData = void 0;
-const formTemplate_1 = require("./models/formTemplate");
-const questionType_1 = require("./models/questionType");
-const initData = () => __awaiter(void 0, void 0, void 0, function* () {
-    const questionTypes = yield questionType_1.getAllQuestionTypes();
-    const formTemplates = yield formTemplate_1.getAllFormTemplates();
-    if (!questionTypes.length) {
-        yield questionType_1.initQuestionTypesData();
-    }
-    if (!formTemplates.length) {
-        yield formTemplate_1.initFormTemplatesData();
-    }
-});
-exports.initData = initData;
+exports.questionTypeRoutes = void 0;
+const questionType_1 = require("../../database/models/questionType");
+const questionTypeRoutes = (app) => {
+    app.get('/questionTypes', (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const questionTypes = yield questionType_1.getAllQuestionTypes();
+        res.json({ questionTypes });
+    }));
+};
+exports.questionTypeRoutes = questionTypeRoutes;
