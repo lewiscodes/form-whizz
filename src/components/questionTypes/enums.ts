@@ -1,0 +1,9 @@
+export enum EQuestionType {
+    TEXT = 'TEXT',
+    NUMBER = 'NUMBER',
+    RADIO_LIST = 'RADIO_LIST',
+    DROPDOWN_LIST = 'DROPDOWN_LIST',
+    SEARCHABLE_LIST = 'SEARCHABLE_LIST',
+    TREE_LIST = 'TREE_LIST',
+    DATE_TIME = 'DATE_TIME'
+}
