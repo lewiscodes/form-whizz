@@ -10,17 +10,15 @@ interface QuestionTemplateAttributes {
     readonly questionId: string;
     version: number;
     text: string;
-    readonly archived: boolean;
 }
 
-interface IQuestionTemplateAttributes extends Optional<QuestionTemplateAttributes, 'id' | 'archived'> {}
+interface IQuestionTemplateAttributes extends Optional<QuestionTemplateAttributes, 'id'> {}
 
 export class QuestionTemplate extends Model<IQuestionTemplateAttributes> {
     private id!: string;
     public questionId!: string;
     public version!: number;
     private text!: string;
-    private archived!: boolean;
 
     public setQuestionType!: HasOneSetAssociationMixin<QuestionType, string>;
     public getQuestionType!: HasOneGetAssociationMixin<QuestionType>;
@@ -48,14 +46,10 @@ QuestionTemplate.init({
     text: {
         type: DataTypes.STRING,
         allowNull: false
-    },
-    archived: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
     }
 }, {
-    sequelize: sql
+    sequelize: sql,
+    paranoid: true
 });
 
 // TODO: try and get the foreignKey to be questionTemplateId rather than QuestionTemplateId
@@ -119,11 +113,10 @@ export const editQuestionTemplate = async (id: string, newQuestionTemplateData: 
     }
 };
 
-// TODO: replace with Sequelize "paranoid" implimentation
 export const archiveQuestionTemplate = async (id: string): Promise<QuestionTemplate | IError | undefined> => {
     const questionTemplate = await getQuestionTemplate(id);
     if (questionTemplate) {
-        await questionTemplate.update({ archived: true });
+        await questionTemplate.destroy();
         return questionTemplate;
     }
 }

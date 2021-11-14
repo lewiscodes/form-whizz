@@ -35,14 +35,10 @@ FormTemplate.init({
         type: sequelize_1.DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
-    },
-    archived: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
     }
 }, {
-    sequelize: __1.default
+    sequelize: __1.default,
+    paranoid: true
 });
 const initFormTemplatesData = () => __awaiter(void 0, void 0, void 0, function* () {
     yield FormTemplate.create({ name: 'Primary', isPrimary: true });
@@ -79,14 +75,13 @@ const editFormTemplate = (id, newFormTemplateData) => __awaiter(void 0, void 0, 
     }
 });
 exports.editFormTemplate = editFormTemplate;
-// TODO: replace with Sequelize "paranoid" implimentation
 const archiveFormTemplate = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const formTemplate = yield exports.getFormTemplate(id);
     if (formTemplate) {
         if (formTemplate.isPrimary) {
             return error_1.generateError(500, `Can't archive primary form template`);
         }
-        yield formTemplate.update({ archived: true });
+        yield formTemplate.destroy();
         return formTemplate;
     }
 });

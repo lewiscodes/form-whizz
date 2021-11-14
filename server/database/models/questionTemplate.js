@@ -40,14 +40,10 @@ QuestionTemplate.init({
     text: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: false
-    },
-    archived: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
     }
 }, {
-    sequelize: __1.default
+    sequelize: __1.default,
+    paranoid: true
 });
 // TODO: try and get the foreignKey to be questionTemplateId rather than QuestionTemplateId
 QuestionTemplate.belongsTo(questionType_1.QuestionType);
@@ -102,11 +98,10 @@ const editQuestionTemplate = (id, newQuestionTemplateData) => __awaiter(void 0, 
     }
 });
 exports.editQuestionTemplate = editQuestionTemplate;
-// TODO: replace with Sequelize "paranoid" implimentation
 const archiveQuestionTemplate = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const questionTemplate = yield exports.getQuestionTemplate(id);
     if (questionTemplate) {
-        yield questionTemplate.update({ archived: true });
+        yield questionTemplate.destroy();
         return questionTemplate;
     }
 });

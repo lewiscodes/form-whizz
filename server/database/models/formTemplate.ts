@@ -7,16 +7,14 @@ interface FormTemplateAttributes {
     readonly id: string;
     readonly name: string;
     readonly isPrimary: boolean;
-    readonly archived: boolean;
 }
 
-interface IFormTemplateAttributes extends Optional<FormTemplateAttributes, 'id' | 'archived'> {}
+interface IFormTemplateAttributes extends Optional<FormTemplateAttributes, 'id'> {}
 
 export class FormTemplate extends Model<IFormTemplateAttributes> {
     private id!: string;
     private name!: string;
     public isPrimary!: boolean;
-    private archived!: boolean;
 };
 
 FormTemplate.init({
@@ -34,14 +32,10 @@ FormTemplate.init({
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
-    },
-    archived: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
     }
 }, {
-    sequelize: sql
+    sequelize: sql,
+    paranoid: true
 })
 
 export const initFormTemplatesData = async (): Promise<void> => {
@@ -79,7 +73,6 @@ export const editFormTemplate = async (id: string, newFormTemplateData: IEditFor
     }
 };
 
-// TODO: replace with Sequelize "paranoid" implimentation
 export const archiveFormTemplate = async (id: string): Promise<FormTemplate | IError | undefined> => {
     const formTemplate = await getFormTemplate(id);
     if (formTemplate) {
@@ -87,7 +80,7 @@ export const archiveFormTemplate = async (id: string): Promise<FormTemplate | IE
             return generateError(500, `Can't archive primary form template`);
         }
 
-        await formTemplate.update({ archived: true });
+        await formTemplate.destroy();
         return formTemplate;
     }
 }
