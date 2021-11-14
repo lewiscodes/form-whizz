@@ -74,8 +74,8 @@ const createQuestionTemplate = (questionTemplateParams) => __awaiter(void 0, voi
         questionId: uuidv4_1.uuid(),
         version: 1
     });
-    questionTemplate.setQuestionType(foundQuestionType);
-    return questionTemplate;
+    yield questionTemplate.setQuestionType(foundQuestionType);
+    return (yield exports.getQuestionTemplate(questionTemplate.questionId)) || undefined;
 });
 exports.createQuestionTemplate = createQuestionTemplate;
 const editableFields = ['text'];

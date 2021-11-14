@@ -1,4 +1,4 @@
-import { Association, col, DataTypes, fn, HasOneGetAssociationMixin, HasOneSetAssociationMixin, Model, Optional, Sequelize } from "sequelize";
+import { Association, DataTypes, HasOneGetAssociationMixin, HasOneSetAssociationMixin, Model, Optional } from "sequelize";
 import { uuid } from 'uuidv4';
 import sql from "..";
 import { generateError, IError } from "../../api/error";
@@ -17,7 +17,7 @@ interface IQuestionTemplateAttributes extends Optional<QuestionTemplateAttribute
 
 export class QuestionTemplate extends Model<IQuestionTemplateAttributes> {
     private id!: string;
-    private questionId!: string;
+    public questionId!: string;
     public version!: number;
     private text!: string;
     private archived!: boolean;
@@ -76,7 +76,7 @@ export const getQuestionTemplate = async (questionId: string): Promise<QuestionT
     return questionTemplates.reduce((prev, current) => (prev.version > current.version ? prev : current));
 }
 
-export const createQuestionTemplate = async (questionTemplateParams: INewQuestionTemplate): Promise<QuestionTemplate | IError> => {
+export const createQuestionTemplate = async (questionTemplateParams: INewQuestionTemplate): Promise<QuestionTemplate | IError | undefined> => {
     const foundQuestionType = await getQuestionType(questionTemplateParams.questionTemplateId);
 
     if (!foundQuestionType) {
@@ -89,9 +89,8 @@ export const createQuestionTemplate = async (questionTemplateParams: INewQuestio
         version: 1
     });
 
-    questionTemplate.setQuestionType(foundQuestionType);
-
-    return questionTemplate;
+    await questionTemplate.setQuestionType(foundQuestionType);
+    return await getQuestionTemplate(questionTemplate.questionId) || undefined;
 }
 
 const editableFields: (keyof QuestionTemplateAttributes)[] = ['text'];
