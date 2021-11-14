@@ -48,14 +48,16 @@ QuestionTemplate.init({
 // TODO: try and get the foreignKey to be questionTemplateId rather than QuestionTemplateId
 QuestionTemplate.belongsTo(questionType_1.QuestionType);
 questionType_1.QuestionType.hasOne(QuestionTemplate);
+const selectAttributes = ['questionId', 'version', 'text', 'createdAt', 'deletedAt'];
 const getAllQuestionTemplates = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield QuestionTemplate.findAll({ include: 'QuestionType' });
+    return yield QuestionTemplate.findAll({ include: 'QuestionType', attributes: selectAttributes });
 });
 exports.getAllQuestionTemplates = getAllQuestionTemplates;
 const getQuestionTemplate = (questionId) => __awaiter(void 0, void 0, void 0, function* () {
     const questionTemplates = yield QuestionTemplate.findAll({
         where: { questionId },
-        include: 'QuestionType'
+        include: 'QuestionType',
+        attributes: selectAttributes
     });
     return questionTemplates.reduce((prev, current) => (prev.version > current.version ? prev : current));
 });

@@ -18,7 +18,9 @@ export class QuestionTemplate extends Model<IQuestionTemplateAttributes> {
     private id!: string;
     public questionId!: string;
     public version!: number;
-    private text!: string;
+    public text!: string;
+    public createdAt!: string;
+    public deletedAt!: string;
 
     public setQuestionType!: HasOneSetAssociationMixin<QuestionType, string>;
     public getQuestionType!: HasOneGetAssociationMixin<QuestionType>;
@@ -56,15 +58,17 @@ QuestionTemplate.init({
 QuestionTemplate.belongsTo(QuestionType);
 QuestionType.hasOne(QuestionTemplate);
 
+const selectAttributes: (keyof QuestionTemplate)[] = ['questionId', 'version', 'text', 'createdAt', 'deletedAt']
 
 export const getAllQuestionTemplates = async (): Promise<QuestionTemplate[]> => {
-    return await QuestionTemplate.findAll({ include: 'QuestionType' });
+    return await QuestionTemplate.findAll({ include: 'QuestionType', attributes: selectAttributes });
 };
 
 export const getQuestionTemplate = async (questionId: string): Promise<QuestionTemplate | null> => {
     const questionTemplates = await QuestionTemplate.findAll({
         where: { questionId },
-        include: 'QuestionType'
+        include: 'QuestionType',
+        attributes: selectAttributes
     });
 
     return questionTemplates.reduce((prev, current) => (prev.version > current.version ? prev : current));
