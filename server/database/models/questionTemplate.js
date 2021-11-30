@@ -12,99 +12,56 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.archiveQuestionTemplate = exports.editQuestionTemplate = exports.createQuestionTemplate = exports.getQuestionTemplate = exports.getAllQuestionTemplates = exports.QuestionTemplate = void 0;
-const sequelize_1 = require("sequelize");
-const uuidv4_1 = require("uuidv4");
+exports.archiveQuestionTemplate = exports.editQuestionTemplate = exports.createQuestionTemplate = exports.getQuestionTemplate = exports.getAllQuestionTemplates = void 0;
 const __1 = __importDefault(require(".."));
 const error_1 = require("../../api/error");
 const questionType_1 = require("./questionType");
-class QuestionTemplate extends sequelize_1.Model {
-}
-exports.QuestionTemplate = QuestionTemplate;
-;
-QuestionTemplate.init({
-    id: {
-        type: sequelize_1.DataTypes.UUID,
-        allowNull: false,
-        primaryKey: true,
-        defaultValue: sequelize_1.DataTypes.UUIDV4
-    },
-    questionId: {
-        type: sequelize_1.DataTypes.UUID,
-        allowNull: false,
-    },
-    version: {
-        type: sequelize_1.DataTypes.INTEGER,
-        allowNull: false
-    },
-    text: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: false
-    }
-}, {
-    sequelize: __1.default,
-    paranoid: true
-});
-// TODO: try and get the foreignKey to be questionTemplateId rather than QuestionTemplateId
-QuestionTemplate.belongsTo(questionType_1.QuestionType);
-questionType_1.QuestionType.hasOne(QuestionTemplate);
-const selectAttributes = ['questionId', 'version', 'text', 'createdAt', 'deletedAt'];
 const getAllQuestionTemplates = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield QuestionTemplate.findAll({ include: 'QuestionType', attributes: selectAttributes });
+    const res = yield __1.default.query('SELECT * FROM public."QuestionTemplates" WHERE "deletedAt" IS NULL');
+    return res.rows;
 });
 exports.getAllQuestionTemplates = getAllQuestionTemplates;
 const getQuestionTemplate = (questionId) => __awaiter(void 0, void 0, void 0, function* () {
-    const questionTemplates = yield QuestionTemplate.findAll({
-        where: { questionId },
-        include: 'QuestionType',
-        attributes: selectAttributes
-    });
-    return questionTemplates.reduce((prev, current) => (prev.version > current.version ? prev : current));
+    const res = yield __1.default.query('SELECT * FROM public."QuestionTemplates" WHERE "questionId" = $1 AND "deletedAt" IS NULL ORDER BY "version" DESC LIMIT 1', [questionId]);
+    return res.rows[0];
 });
 exports.getQuestionTemplate = getQuestionTemplate;
 const createQuestionTemplate = (questionTemplateParams) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const foundQuestionType = yield questionType_1.getQuestionType(questionTemplateParams.questionTemplateId);
     if (!foundQuestionType) {
-        return error_1.generateError(500, 'Invalid questionTemplateId');
+        return error_1.generateError(500, 'Invalid questionTypeId');
     }
-    const questionTemplate = yield QuestionTemplate.create({
-        text: questionTemplateParams.text,
-        questionId: uuidv4_1.uuid(),
-        version: 1
-    });
-    yield questionTemplate.setQuestionType(foundQuestionType);
-    return (yield exports.getQuestionTemplate(questionTemplate.questionId)) || undefined;
+    const newQuestionIdRes = yield __1.default.query('SELECT "questionId" FROM public."QuestionTemplates" ORDER BY "questionId" DESC LIMIT 1');
+    const newQuestionId = ((_a = newQuestionIdRes.rows[0]) === null || _a === void 0 ? void 0 : _a.questionId) + 1 || 1;
+    const res = yield __1.default.query(`INSERT INTO public."QuestionTemplates"
+        ("text", "questionId", "questionTypeId", "version", "createdAt")
+        VALUES($1, $2, $3, $4, $5)
+        RETURNING *
+    `, [questionTemplateParams.text, newQuestionId, foundQuestionType.id, 1, new Date()]);
+    return res.rows[0];
 });
 exports.createQuestionTemplate = createQuestionTemplate;
-const editableFields = ['text'];
+// TODO - use editable fields here...
+// const editableFields: (keyof IQuestionTemplate)[] = ['text'];
 const editQuestionTemplate = (id, newQuestionTemplateData) => __awaiter(void 0, void 0, void 0, function* () {
     const questionTemplate = yield exports.getQuestionTemplate(id);
     if (questionTemplate) {
-        const foundQuestionTemplate = questionTemplate === null || questionTemplate === void 0 ? void 0 : questionTemplate.toJSON();
-        if (foundQuestionTemplate) {
-            const keys = Object.keys(newQuestionTemplateData);
-            for (let x = 0; x < keys.length; x++) {
-                const key = keys[x];
-                if (editableFields.includes(key)) {
-                    const value = newQuestionTemplateData[key];
-                    if (value) {
-                        foundQuestionTemplate[key] = value;
-                    }
-                }
-            }
-            delete foundQuestionTemplate.id;
-            foundQuestionTemplate.version++;
-            yield QuestionTemplate.create(foundQuestionTemplate);
-            return (yield exports.getQuestionTemplate(foundQuestionTemplate.questionId)) || undefined;
-        }
+        const questionText = newQuestionTemplateData.text || questionTemplate.text;
+        const res = yield __1.default.query(`INSERT INTO public."QuestionTemplates"
+            ("text", "questionId", "questionTypeId", "version", "createdAt", "modifiedAt")
+            VALUES($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [questionText, questionTemplate.questionId, questionTemplate.questionTypeId, questionTemplate.version + 1, questionTemplate.createdAt, new Date()]);
+        return res.rows[0];
     }
 });
 exports.editQuestionTemplate = editQuestionTemplate;
 const archiveQuestionTemplate = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const questionTemplate = yield exports.getQuestionTemplate(id);
     if (questionTemplate) {
-        yield questionTemplate.destroy();
-        return questionTemplate;
+        const res = yield __1.default.query('UPDATE public."QuestionTemplates" SET "deletedAt" = $1 WHERE "questionId" = $2', [new Date(), id]);
+        return res.rows[0];
     }
 });
 exports.archiveQuestionTemplate = archiveQuestionTemplate;

@@ -12,40 +12,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initQuestionTypesData = exports.getQuestionType = exports.getAllQuestionTypes = exports.QuestionType = void 0;
-const sequelize_1 = require("sequelize");
+exports.getQuestionType = exports.getAllQuestionTypes = exports.EQuestionType = void 0;
 const __1 = __importDefault(require(".."));
-class QuestionType extends sequelize_1.Model {
-}
-exports.QuestionType = QuestionType;
-;
-QuestionType.init({
-    id: {
-        type: sequelize_1.DataTypes.UUID,
-        allowNull: false,
-        primaryKey: true,
-        defaultValue: sequelize_1.DataTypes.UUIDV4
-    },
-    type: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: false
-    }
-}, {
-    sequelize: __1.default
-});
+var EQuestionType;
+(function (EQuestionType) {
+    EQuestionType["TEXT"] = "Text";
+    EQuestionType["NUMBER"] = "Number";
+    EQuestionType["BOOLEAN"] = "Boolean";
+    EQuestionType["RADIO"] = "Radio";
+    EQuestionType["SELECT"] = "Select";
+})(EQuestionType = exports.EQuestionType || (exports.EQuestionType = {}));
 const getAllQuestionTypes = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield QuestionType.findAll();
+    const res = yield __1.default.query('SELECT * FROM public."QuestionTypes"');
+    return res.rows;
 });
 exports.getAllQuestionTypes = getAllQuestionTypes;
 const getQuestionType = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield QuestionType.findByPk(id);
+    const res = yield __1.default.query('SELECT * FROM public."QuestionTypes" WHERE id = $1', [id]);
+    return res.rows[0];
 });
 exports.getQuestionType = getQuestionType;
-const initQuestionTypesData = () => __awaiter(void 0, void 0, void 0, function* () {
-    yield QuestionType.create({ type: 'String' });
-    yield QuestionType.create({ type: 'Number' });
-    yield QuestionType.create({ type: 'Boolean' });
-    yield QuestionType.create({ type: 'Radio' });
-    yield QuestionType.create({ type: 'Select' });
-});
-exports.initQuestionTypesData = initQuestionTypesData;

@@ -1,86 +1,59 @@
-import { DataTypes, Model, Optional } from "sequelize";
 import sql from "..";
 import { generateError, IError } from "../../api/error";
-import { IEditFormTemplate, INewFormTemplate } from "../../types/formTemplate";
+import { IEditFormTemplate, INewFormTemplate } from "../../api/models/formTemplate";
+import { generateUpdateScriptAndValues } from "../utils";
 
-interface FormTemplateAttributes {
-    readonly id: string;
+export interface IFormTemplate {
+    readonly id: number;
     readonly name: string;
     readonly isPrimary: boolean;
+    readonly createdAt: Date;
+    readonly modifiedAt: Date | null;
+    readonly deletedAt: Date | null;
 }
 
-interface IFormTemplateAttributes extends Optional<FormTemplateAttributes, 'id'> {}
-
-export class FormTemplate extends Model<IFormTemplateAttributes> {
-    private id!: string;
-    private name!: string;
-    public isPrimary!: boolean;
+export const getAllFormTemplates = async (): Promise<IFormTemplate[]> => {
+    const res = await sql.query<IFormTemplate>('SELECT * FROM public."FormTemplates" WHERE "deletedAt" IS NULL');
+    return res.rows;
 };
 
-FormTemplate.init({
-    id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        primaryKey: true,
-        defaultValue: DataTypes.UUIDV4
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    isPrimary: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
-    }
-}, {
-    sequelize: sql,
-    paranoid: true
-})
-
-export const initFormTemplatesData = async (): Promise<void> => {
-    await FormTemplate.create({ name: 'Primary', isPrimary: true });
+export const getFormTemplate = async (id: string): Promise<IFormTemplate | null> => {
+    const res = await sql.query<IFormTemplate>('SELECT * FROM public."FormTemplates" WHERE id = $1 AND "deletedAt" IS NULL', [id]);
+    return res.rows[0];
 }
 
-export const getAllFormTemplates = async (): Promise<FormTemplate[]> => {
-    return await FormTemplate.findAll();
-};
-
-export const getFormTemplate = async (id: string): Promise<FormTemplate | null> => {
-    return await FormTemplate.findByPk(id);
+export const createFormTemplate = async (formTemplate: INewFormTemplate): Promise<IFormTemplate> => {
+    const res = await sql.query(`INSERT INTO public."FormTemplates"
+        ("name", "isPrimary", "createdAt")
+        VALUES($1, $2, $3)
+        RETURNING *
+    `, [formTemplate.name, false, new Date()]);
+    return res.rows[0];
 }
 
-export const createFormTemplate = async (formTemplate: INewFormTemplate): Promise<FormTemplate> => {
-    return await FormTemplate.create({
-        name: formTemplate.name,
-        isPrimary: false
-    });
-}
-
-const editableFields: (keyof FormTemplateAttributes)[] = ['name'];
-export const editFormTemplate = async (id: string, newFormTemplateData: IEditFormTemplate): Promise<FormTemplate | undefined> => {
+const editableFields: (keyof IFormTemplate)[] = ['name'];
+export const editFormTemplate = async (id: string, newFormTemplateData: IEditFormTemplate): Promise<void> => {
     const formTemplate = await getFormTemplate(id);
     if (formTemplate) {
-        const keys = Object.keys(newFormTemplateData) as (keyof IEditFormTemplate)[];
-        for (let x = 0; x < keys.length; x++) {
-            const key = keys[x];
-            if (editableFields.includes(key)) {
-                const value = newFormTemplateData[key];
-                await formTemplate.update({ [key]: value });
-            }
-        }
-        return formTemplate;
+        const { script, values } = generateUpdateScriptAndValues(editableFields, newFormTemplateData as Record<string, unknown>);
+        const res = await sql.query(`UPDATE public."FormTemplates"
+            SET ${script}
+            WHERE id = $${values.length + 1}
+            RETURNING *
+        `, [...values, id]);
+
+        return res.rows[0];
     }
 };
 
-export const archiveFormTemplate = async (id: string): Promise<FormTemplate | IError | undefined> => {
+export const archiveFormTemplate = async (id: string): Promise<IFormTemplate | IError | undefined> => {
     const formTemplate = await getFormTemplate(id);
     if (formTemplate) {
         if (formTemplate.isPrimary) {
             return generateError(500, `Can't archive primary form template`);
         }
 
-        await formTemplate.destroy();
-        return formTemplate;
+        const res = await sql.query('UPDATE public."FormTemplates" SET "deletedAt" = $1 WHERE id = $2 RETURNING *', [new Date(), id]);
+        return res.rows[0];
     }
 }

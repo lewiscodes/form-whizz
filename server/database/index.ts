@@ -1,5 +1,11 @@
-import { Sequelize } from 'sequelize';
+import { Pool } from 'pg';
 
-const sql = new Sequelize('postgres://sa:pass@localhost:5432/form_whizz');
+const sql = new Pool({
+    user: 'sa',
+    host: 'localhost',
+    database: 'form_whizz',
+    password: 'pass',
+    port: 5555,
+});
 
 export default sql;

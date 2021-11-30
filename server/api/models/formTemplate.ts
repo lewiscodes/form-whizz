@@ -1,8 +1,15 @@
 import { Express } from 'express';
 import { archiveFormTemplate, createFormTemplate, editFormTemplate, getAllFormTemplates, getFormTemplate } from '../../database/models/formTemplate';
-import { IEditFormTemplate, INewFormTemplate } from '../../types/formTemplate';
 import { isError } from '../error';
 import { getBodyData, getIdFromRequest } from '../utils';
+
+export interface INewFormTemplate {
+    readonly name: string;
+}
+
+export interface IEditFormTemplate {
+    readonly name?: string;
+}
 
 export const formTemplateRoutes = (app: Express) => {
     app.get('/formTemplates', async (_req, res) => {

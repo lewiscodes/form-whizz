@@ -12,66 +12,40 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.archiveFormTemplate = exports.editFormTemplate = exports.createFormTemplate = exports.getFormTemplate = exports.getAllFormTemplates = exports.initFormTemplatesData = exports.FormTemplate = void 0;
-const sequelize_1 = require("sequelize");
+exports.archiveFormTemplate = exports.editFormTemplate = exports.createFormTemplate = exports.getFormTemplate = exports.getAllFormTemplates = void 0;
 const __1 = __importDefault(require(".."));
 const error_1 = require("../../api/error");
-class FormTemplate extends sequelize_1.Model {
-}
-exports.FormTemplate = FormTemplate;
-;
-FormTemplate.init({
-    id: {
-        type: sequelize_1.DataTypes.UUID,
-        allowNull: false,
-        primaryKey: true,
-        defaultValue: sequelize_1.DataTypes.UUIDV4
-    },
-    name: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: false
-    },
-    isPrimary: {
-        type: sequelize_1.DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
-    }
-}, {
-    sequelize: __1.default,
-    paranoid: true
-});
-const initFormTemplatesData = () => __awaiter(void 0, void 0, void 0, function* () {
-    yield FormTemplate.create({ name: 'Primary', isPrimary: true });
-});
-exports.initFormTemplatesData = initFormTemplatesData;
+const utils_1 = require("../utils");
 const getAllFormTemplates = () => __awaiter(void 0, void 0, void 0, function* () {
-    return yield FormTemplate.findAll();
+    const res = yield __1.default.query('SELECT * FROM public."FormTemplates" WHERE "deletedAt" IS NULL');
+    return res.rows;
 });
 exports.getAllFormTemplates = getAllFormTemplates;
 const getFormTemplate = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield FormTemplate.findByPk(id);
+    const res = yield __1.default.query('SELECT * FROM public."FormTemplates" WHERE id = $1 AND "deletedAt" IS NULL', [id]);
+    return res.rows[0];
 });
 exports.getFormTemplate = getFormTemplate;
 const createFormTemplate = (formTemplate) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield FormTemplate.create({
-        name: formTemplate.name,
-        isPrimary: false
-    });
+    const res = yield __1.default.query(`INSERT INTO public."FormTemplates"
+        ("name", "isPrimary", "createdAt")
+        VALUES($1, $2, $3)
+        RETURNING *
+    `, [formTemplate.name, false, new Date()]);
+    return res.rows[0];
 });
 exports.createFormTemplate = createFormTemplate;
 const editableFields = ['name'];
 const editFormTemplate = (id, newFormTemplateData) => __awaiter(void 0, void 0, void 0, function* () {
     const formTemplate = yield exports.getFormTemplate(id);
     if (formTemplate) {
-        const keys = Object.keys(newFormTemplateData);
-        for (let x = 0; x < keys.length; x++) {
-            const key = keys[x];
-            if (editableFields.includes(key)) {
-                const value = newFormTemplateData[key];
-                yield formTemplate.update({ [key]: value });
-            }
-        }
-        return formTemplate;
+        const { script, values } = utils_1.generateUpdateScriptAndValues(editableFields, newFormTemplateData);
+        const res = yield __1.default.query(`UPDATE public."FormTemplates"
+            SET ${script}
+            WHERE id = $${values.length + 1}
+            RETURNING *
+        `, [...values, id]);
+        return res.rows[0];
     }
 });
 exports.editFormTemplate = editFormTemplate;
@@ -81,8 +55,8 @@ const archiveFormTemplate = (id) => __awaiter(void 0, void 0, void 0, function* 
         if (formTemplate.isPrimary) {
             return error_1.generateError(500, `Can't archive primary form template`);
         }
-        yield formTemplate.destroy();
-        return formTemplate;
+        const res = yield __1.default.query('UPDATE public."FormTemplates" SET "deletedAt" = $1 WHERE id = $2 RETURNING *', [new Date(), id]);
+        return res.rows[0];
     }
 });
 exports.archiveFormTemplate = archiveFormTemplate;

@@ -47,7 +47,7 @@ const questionTemplateRoutes = (app) => {
         const archivedQuestionTemplate = yield questionTemplate_1.archiveQuestionTemplate(questionTemplateId);
         res.json({ archivedQuestionTemplate });
     }));
-    // TODO
-    // app.put('/questionTemplate/:id/changeQuestionType')
+    //     // TODO
+    //     // app.put('/questionTemplate/:id/changeQuestionType')
 };
 exports.questionTemplateRoutes = questionTemplateRoutes;

@@ -1,126 +1,67 @@
-import { Association, DataTypes, HasOneGetAssociationMixin, HasOneSetAssociationMixin, Model, Optional } from "sequelize";
-import { uuid } from 'uuidv4';
 import sql from "..";
 import { generateError, IError } from "../../api/error";
-import { IEditQuestionTemplate, INewQuestionTemplate } from "../../types/questionTemplates";
-import { getQuestionType, QuestionType } from "./questionType";
+import { IEditQuestionTemplate, INewQuestionTemplate } from "../../api/models/questionTemplate";
+import { getQuestionType } from "./questionType";
 
-interface QuestionTemplateAttributes {
-    id: string;
-    readonly questionId: string;
-    version: number;
-    text: string;
+export interface IQuestionTemplate {
+    readonly id: number;
+    readonly questionId: number;
+    readonly version: number;
+    readonly text: string;
+    readonly questionTypeId: number;
+    readonly createdAt: Date;
+    readonly modifiedAt: Date | null;
+    readonly deletedAt: Date | null;
 }
 
-interface IQuestionTemplateAttributes extends Optional<QuestionTemplateAttributes, 'id'> {}
-
-export class QuestionTemplate extends Model<IQuestionTemplateAttributes> {
-    private id!: string;
-    public questionId!: string;
-    public version!: number;
-    public text!: string;
-    public createdAt!: string;
-    public deletedAt!: string;
-
-    public setQuestionType!: HasOneSetAssociationMixin<QuestionType, string>;
-    public getQuestionType!: HasOneGetAssociationMixin<QuestionType>;
-
-    public static associations: {
-        questionType: Association<QuestionTemplate, QuestionType>;
-    };
+export const getAllQuestionTemplates = async (): Promise<IQuestionTemplate[]> => {
+    const res = await sql.query<IQuestionTemplate>('SELECT * FROM public."QuestionTemplates" WHERE "deletedAt" IS NULL');
+    return res.rows;
 };
 
-QuestionTemplate.init({
-    id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        primaryKey: true,
-        defaultValue: DataTypes.UUIDV4
-    },
-    questionId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-    },
-    version: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    text: {
-        type: DataTypes.STRING,
-        allowNull: false
-    }
-}, {
-    sequelize: sql,
-    paranoid: true
-});
-
-// TODO: try and get the foreignKey to be questionTemplateId rather than QuestionTemplateId
-QuestionTemplate.belongsTo(QuestionType);
-QuestionType.hasOne(QuestionTemplate);
-
-const selectAttributes: (keyof QuestionTemplate)[] = ['questionId', 'version', 'text', 'createdAt', 'deletedAt']
-
-export const getAllQuestionTemplates = async (): Promise<QuestionTemplate[]> => {
-    return await QuestionTemplate.findAll({ include: 'QuestionType', attributes: selectAttributes });
-};
-
-export const getQuestionTemplate = async (questionId: string): Promise<QuestionTemplate | null> => {
-    const questionTemplates = await QuestionTemplate.findAll({
-        where: { questionId },
-        include: 'QuestionType',
-        attributes: selectAttributes
-    });
-
-    return questionTemplates.reduce((prev, current) => (prev.version > current.version ? prev : current));
+export const getQuestionTemplate = async (questionId: string): Promise<IQuestionTemplate | null> => {
+    const res = await sql.query<IQuestionTemplate>('SELECT * FROM public."QuestionTemplates" WHERE "questionId" = $1 AND "deletedAt" IS NULL ORDER BY "version" DESC LIMIT 1', [questionId]);
+    return res.rows[0];
 }
 
-export const createQuestionTemplate = async (questionTemplateParams: INewQuestionTemplate): Promise<QuestionTemplate | IError | undefined> => {
+export const createQuestionTemplate = async (questionTemplateParams: INewQuestionTemplate): Promise<IQuestionTemplate | IError | undefined> => {
     const foundQuestionType = await getQuestionType(questionTemplateParams.questionTemplateId);
 
     if (!foundQuestionType) {
-        return generateError(500, 'Invalid questionTemplateId');
+        return generateError(500, 'Invalid questionTypeId');
     }
 
-    const questionTemplate = await QuestionTemplate.create({
-        text: questionTemplateParams.text,
-        questionId: uuid(),
-        version: 1
-    });
+    const newQuestionIdRes = await sql.query<IQuestionTemplate>('SELECT "questionId" FROM public."QuestionTemplates" ORDER BY "questionId" DESC LIMIT 1');
+    const newQuestionId: number = newQuestionIdRes.rows[0]?.questionId + 1 || 1;
 
-    await questionTemplate.setQuestionType(foundQuestionType);
-    return await getQuestionTemplate(questionTemplate.questionId) || undefined;
+    const res = await sql.query(`INSERT INTO public."QuestionTemplates"
+        ("text", "questionId", "questionTypeId", "version", "createdAt")
+        VALUES($1, $2, $3, $4, $5)
+        RETURNING *
+    `, [questionTemplateParams.text, newQuestionId, foundQuestionType.id, 1, new Date()]);
+    return res.rows[0];
 }
 
-const editableFields: (keyof QuestionTemplateAttributes)[] = ['text'];
-export const editQuestionTemplate = async (id: string, newQuestionTemplateData: IEditQuestionTemplate): Promise<QuestionTemplate | undefined> => {
+// TODO - use editable fields here...
+// const editableFields: (keyof IQuestionTemplate)[] = ['text'];
+export const editQuestionTemplate = async (id: string, newQuestionTemplateData: IEditQuestionTemplate): Promise<IQuestionTemplate | undefined> => {
     const questionTemplate = await getQuestionTemplate(id);
     if (questionTemplate) {
-        const foundQuestionTemplate: IQuestionTemplateAttributes = questionTemplate?.toJSON() as IQuestionTemplateAttributes;
-        if (foundQuestionTemplate) {
-            const keys = Object.keys(newQuestionTemplateData) as (keyof IEditQuestionTemplate)[];
-            for (let x = 0; x < keys.length; x++) {
-                const key = keys[x];
-                if (editableFields.includes(key)) {
-                    const value = newQuestionTemplateData[key];
-                    if (value) {
-                        foundQuestionTemplate[key] = value;
-                    }
-                }
-            }
+        const questionText = newQuestionTemplateData.text || questionTemplate.text;
+        const res = await sql.query(`INSERT INTO public."QuestionTemplates"
+            ("text", "questionId", "questionTypeId", "version", "createdAt", "modifiedAt")
+            VALUES($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `, [questionText, questionTemplate.questionId, questionTemplate.questionTypeId, questionTemplate.version + 1, questionTemplate.createdAt, new Date()]);
 
-            delete foundQuestionTemplate.id;
-            foundQuestionTemplate.version++
-
-            await QuestionTemplate.create(foundQuestionTemplate);
-            return await getQuestionTemplate(foundQuestionTemplate.questionId) || undefined;
-        }
+        return res.rows[0];
     }
 };
 
-export const archiveQuestionTemplate = async (id: string): Promise<QuestionTemplate | IError | undefined> => {
+export const archiveQuestionTemplate = async (id: string): Promise<IQuestionTemplate | IError | undefined> => {
     const questionTemplate = await getQuestionTemplate(id);
     if (questionTemplate) {
-        await questionTemplate.destroy();
-        return questionTemplate;
+        const res = await sql.query('UPDATE public."QuestionTemplates" SET "deletedAt" = $1 WHERE "questionId" = $2', [new Date(), id]);
+        return res.rows[0];
     }
 }

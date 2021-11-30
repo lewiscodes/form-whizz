@@ -1,7 +1,15 @@
 import { Express } from 'express';
 import { archiveQuestionTemplate, createQuestionTemplate, editQuestionTemplate, getAllQuestionTemplates, getQuestionTemplate } from '../../database/models/questionTemplate';
-import { IEditQuestionTemplate, INewQuestionTemplate } from '../../types/questionTemplates';
 import { getBodyData, getIdFromRequest } from '../utils';
+
+export interface INewQuestionTemplate {
+    readonly text: string;
+    readonly questionTemplateId: string;
+}
+
+export interface IEditQuestionTemplate {
+    readonly text?: string;
+}
 
 export const questionTemplateRoutes = (app: Express) => {
     app.get('/questionTemplates', async (_req, res) => {
@@ -47,6 +55,6 @@ export const questionTemplateRoutes = (app: Express) => {
         res.json({ archivedQuestionTemplate });
     });
 
-    // TODO
-    // app.put('/questionTemplate/:id/changeQuestionType')
+//     // TODO
+//     // app.put('/questionTemplate/:id/changeQuestionType')
 }
