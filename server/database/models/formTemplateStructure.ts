@@ -5,6 +5,7 @@ import { getQuestionTemplate } from "./questionTemplate";
 
 export interface IFormTemplateStructure {
     readonly id: number;
+    readonly order: number;
     readonly formTemplateId: number;
     readonly questionTemplateId: number;
     readonly createdAt: Date;
@@ -12,12 +13,8 @@ export interface IFormTemplateStructure {
     readonly deletedAt: Date | null;
 }
 
-// export const getAllFormTemplateStructures = async (): Promise<FormTemplateStructure[]> => {
-//     return await FormTemplateStructure.findAll();
-// }
-
 export const getFormTemplateStructure = async (formTemplateId: string): Promise<IFormTemplateStructure[]> => {
-    const res = await sql.query('SELECT * FROM public."FormTemplateStructures" WHERE "formTemplateId" = $1', [formTemplateId]);
+    const res = await sql.query('SELECT * FROM public."FormTemplateStructures" WHERE "formTemplateId" = $1 ORDER BY "order" ASC', [formTemplateId]);
     return res.rows;
 }
 
@@ -42,4 +39,47 @@ export const addQuestionTemplateToFormTemplate = async (formTemplateId: string, 
     `, [order, formTemplate.id, questionTemplate.questionId, new Date()]);
 
     return res.rows[0];
+}
+
+export const moveFormTemplateQuestion = async (formTemplateId: string, formTemplateStructureId: number, newPosition: number): Promise<IFormTemplateStructure[] | IError | undefined> => {
+    const formTemplate = await getFormTemplate(formTemplateId);
+    if (!formTemplate) {
+        return generateError(500, `Can't find form template`);
+    }
+
+    const formQuestions = await getFormTemplateStructure(formTemplate.id.toString());
+    const foundFormQuestion = formQuestions.find(section => section.id === formTemplateStructureId);
+    if (!foundFormQuestion) {
+        return generateError(500, `Can't find form structure id in form template`);
+    }
+
+    const sqlScript = `UPDATE public."FormTemplateStructures" SET "order" = $1 WHERE "id" = $2`;
+
+    if (foundFormQuestion.order === newPosition) {
+        return formQuestions;
+    } else if (newPosition < foundFormQuestion.order) {
+        for (let x = 0; x < formQuestions.length; x++) {
+            const question = formQuestions[x];
+
+            if (question.id === formTemplateStructureId) {
+                await sql.query(sqlScript, [newPosition, question.id]);
+            } else if (question.order < foundFormQuestion.order) {
+                await sql.query(sqlScript, [question.order + 1, question.id]);
+            }
+        }
+
+        return await getFormTemplateStructure(formTemplateId);
+    } else {
+        for (let x = 0; x < formQuestions.length; x++) {
+            const question = formQuestions[x];
+
+            if (question.id === formTemplateStructureId) {
+                await sql.query(sqlScript, [newPosition, question.id]);
+            } else if (question.order < newPosition || question.order === newPosition) {
+                await sql.query(sqlScript, [question.order - 1, question.id]);
+            }
+        }
+
+        return await getFormTemplateStructure(formTemplateId);
+    }
 }

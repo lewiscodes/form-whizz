@@ -23,5 +23,14 @@ const formTemplateStructureRoutes = (app) => {
         }
         res.sendStatus(400);
     }));
+    app.post('/formTemplate/:id/moveQuestion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const formTemplateId = utils_1.getIdFromRequest(req);
+        const moveQuestionInFormTemplateData = utils_1.getBodyData(req);
+        if (moveQuestionInFormTemplateData) {
+            const updatedFormStructure = yield formTemplateStructure_1.moveFormTemplateQuestion(formTemplateId, moveQuestionInFormTemplateData.formTemplateSectionId, moveQuestionInFormTemplateData.newPosition);
+            return res.json((updatedFormStructure));
+        }
+        res.sendStatus(400);
+    }));
 };
 exports.formTemplateStructureRoutes = formTemplateStructureRoutes;

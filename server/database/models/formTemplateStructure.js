@@ -12,16 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addQuestionTemplateToFormTemplate = exports.getFormTemplateStructure = void 0;
+exports.moveFormTemplateQuestion = exports.addQuestionTemplateToFormTemplate = exports.getFormTemplateStructure = void 0;
 const __1 = __importDefault(require(".."));
 const error_1 = require("../../api/error");
 const formTemplate_1 = require("./formTemplate");
 const questionTemplate_1 = require("./questionTemplate");
-// export const getAllFormTemplateStructures = async (): Promise<FormTemplateStructure[]> => {
-//     return await FormTemplateStructure.findAll();
-// }
 const getFormTemplateStructure = (formTemplateId) => __awaiter(void 0, void 0, void 0, function* () {
-    const res = yield __1.default.query('SELECT * FROM public."FormTemplateStructures" WHERE "formTemplateId" = $1', [formTemplateId]);
+    const res = yield __1.default.query('SELECT * FROM public."FormTemplateStructures" WHERE "formTemplateId" = $1 ORDER BY "order" ASC', [formTemplateId]);
     return res.rows;
 });
 exports.getFormTemplateStructure = getFormTemplateStructure;
@@ -44,3 +41,43 @@ const addQuestionTemplateToFormTemplate = (formTemplateId, questionTemplateId) =
     return res.rows[0];
 });
 exports.addQuestionTemplateToFormTemplate = addQuestionTemplateToFormTemplate;
+const moveFormTemplateQuestion = (formTemplateId, formTemplateStructureId, newPosition) => __awaiter(void 0, void 0, void 0, function* () {
+    const formTemplate = yield formTemplate_1.getFormTemplate(formTemplateId);
+    if (!formTemplate) {
+        return error_1.generateError(500, `Can't find form template`);
+    }
+    const formQuestions = yield exports.getFormTemplateStructure(formTemplate.id.toString());
+    const foundFormQuestion = formQuestions.find(section => section.id === formTemplateStructureId);
+    if (!foundFormQuestion) {
+        return error_1.generateError(500, `Can't find form structure id in form template`);
+    }
+    const sqlScript = `UPDATE public."FormTemplateStructures" SET "order" = $1 WHERE "id" = $2`;
+    if (foundFormQuestion.order === newPosition) {
+        return formQuestions;
+    }
+    else if (newPosition < foundFormQuestion.order) {
+        for (let x = 0; x < formQuestions.length; x++) {
+            const question = formQuestions[x];
+            if (question.id === formTemplateStructureId) {
+                yield __1.default.query(sqlScript, [newPosition, question.id]);
+            }
+            else if (question.order < foundFormQuestion.order) {
+                yield __1.default.query(sqlScript, [question.order + 1, question.id]);
+            }
+        }
+        return yield exports.getFormTemplateStructure(formTemplateId);
+    }
+    else {
+        for (let x = 0; x < formQuestions.length; x++) {
+            const question = formQuestions[x];
+            if (question.id === formTemplateStructureId) {
+                yield __1.default.query(sqlScript, [newPosition, question.id]);
+            }
+            else if (question.order < newPosition || question.order === newPosition) {
+                yield __1.default.query(sqlScript, [question.order - 1, question.id]);
+            }
+        }
+        return yield exports.getFormTemplateStructure(formTemplateId);
+    }
+});
+exports.moveFormTemplateQuestion = moveFormTemplateQuestion;
