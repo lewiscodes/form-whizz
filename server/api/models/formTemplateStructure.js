@@ -23,11 +23,22 @@ const formTemplateStructureRoutes = (app) => {
         }
         res.sendStatus(400);
     }));
+    // MOVE
     app.post('/formTemplate/:id/moveQuestion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const formTemplateId = utils_1.getIdFromRequest(req);
         const moveQuestionInFormTemplateData = utils_1.getBodyData(req);
         if (moveQuestionInFormTemplateData) {
             const updatedFormStructure = yield formTemplateStructure_1.moveFormTemplateQuestion(formTemplateId, moveQuestionInFormTemplateData.formTemplateSectionId, moveQuestionInFormTemplateData.newPosition);
+            return res.json((updatedFormStructure));
+        }
+        res.sendStatus(400);
+    }));
+    // REMOVE
+    app.delete('/formTemplate/:id/removeQuestion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const formTemplateId = utils_1.getIdFromRequest(req);
+        const removeQuestionFromFormTemplateData = utils_1.getBodyData(req);
+        if (removeQuestionFromFormTemplateData) {
+            const updatedFormStructure = yield formTemplateStructure_1.removeQuestionFromFormTemplate(formTemplateId, removeQuestionFromFormTemplateData.formTemplateSectionId);
             return res.json((updatedFormStructure));
         }
         res.sendStatus(400);

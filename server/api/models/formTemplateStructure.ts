@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import { addQuestionTemplateToFormTemplate, moveFormTemplateQuestion } from '../../database/models/formTemplateStructure';
+import { addQuestionTemplateToFormTemplate, moveFormTemplateQuestion, removeQuestionFromFormTemplate } from '../../database/models/formTemplateStructure';
 import { getBodyData, getIdFromRequest } from '../utils';
 
 export interface IAddQuestionToFormTemplate {
@@ -9,6 +9,10 @@ export interface IAddQuestionToFormTemplate {
 export interface IMoveQuestionInFormTemplate {
     readonly formTemplateSectionId: number;
     readonly newPosition: number;
+}
+
+export interface IRemoveQuestionFromFormTemplate {
+    readonly formTemplateSectionId: number;
 }
 
 export const formTemplateStructureRoutes = (app: Express) => {
@@ -24,12 +28,26 @@ export const formTemplateStructureRoutes = (app: Express) => {
         res.sendStatus(400);
     });
 
+    // MOVE
     app.post('/formTemplate/:id/moveQuestion', async (req, res) => {
         const formTemplateId = getIdFromRequest(req);
         const moveQuestionInFormTemplateData = getBodyData<IMoveQuestionInFormTemplate>(req);
 
         if (moveQuestionInFormTemplateData) {
             const updatedFormStructure = await moveFormTemplateQuestion(formTemplateId, moveQuestionInFormTemplateData.formTemplateSectionId, moveQuestionInFormTemplateData.newPosition)
+            return res.json(( updatedFormStructure ));
+        }
+
+        res.sendStatus(400);
+    });
+
+    // REMOVE
+    app.delete('/formTemplate/:id/removeQuestion', async (req, res) => {
+        const formTemplateId = getIdFromRequest(req);
+        const removeQuestionFromFormTemplateData = getBodyData<IRemoveQuestionFromFormTemplate>(req);
+
+        if (removeQuestionFromFormTemplateData) {
+            const updatedFormStructure = await removeQuestionFromFormTemplate(formTemplateId, removeQuestionFromFormTemplateData.formTemplateSectionId);
             return res.json(( updatedFormStructure ));
         }
 

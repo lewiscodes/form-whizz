@@ -30,6 +30,7 @@
     "eject": "react-scripts eject",
     "server:start": "node ./server/index.js",
     "server:compile": "tsc -p ./server",
+    "server:compile:watch": "tsc -p ./server --watch",
     "server": "nodemon ./server/index.js",
     "compile": "yarn server:compile --watch"
   },
